@@ -1,0 +1,999 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a25;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7c6fe0;
+    --accent2: #e06f9a;
+    --accent3: #6fe0c8;
+    --accent4: #e0b86f;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.45);
+    --bar-idle: #2e2d4a;
+    --bar-active: #7c6fe0;
+    --bar-compare: #e06f9a;
+    --bar-sorted: #6fe0c8;
+    --bar-pivot: #e0b86f;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* PAGES */
+  .page { display: none; width: 100%; min-height: 100vh; }
+  .page.active { display: flex; flex-direction: column; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 20px;
+    background: rgba(10,10,15,0.9);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 99;
+    backdrop-filter: blur(10px);
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: var(--accent);
+    margin-right: 12px;
+    letter-spacing: -0.5px;
+  }
+  .nav-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px; font-weight: 500;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover, .nav-btn.active {
+    color: var(--text);
+    background: var(--surface2);
+    border-color: rgba(124,111,224,0.4);
+  }
+  .nav-btn.active { color: var(--accent); }
+
+  /* ── HOME PAGE ── */
+  .home-hero {
+    padding: 60px 20px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .home-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(124,111,224,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero-title {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 700; line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, #7c6fe0 60%, #e06f9a 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    font-size: 15px; color: var(--muted);
+    max-width: 480px; margin: 0 auto 36px;
+    line-height: 1.6;
+  }
+  .algo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; padding: 0 20px 60px;
+    max-width: 900px; margin: 0 auto;
+  }
+  .algo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .algo-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(124,111,224,0.04) 100%);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .algo-card:hover { border-color: rgba(124,111,224,0.35); transform: translateY(-2px); }
+  .algo-card:hover::before { opacity: 1; }
+  .card-icon { font-size: 22px; margin-bottom: 10px; }
+  .card-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .card-avg { font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .card-badge {
+    display: inline-block; margin-top: 8px;
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-good { background: rgba(111,224,200,0.12); color: var(--accent3); }
+  .badge-ok { background: rgba(224,184,111,0.12); color: var(--accent4); }
+  .badge-bad { background: rgba(224,111,154,0.12); color: var(--accent2); }
+
+  /* ── VISUALIZER PAGE ── */
+  .viz-layout {
+    display: flex; flex-direction: column; flex: 1;
+    padding: 16px 20px;
+    gap: 16px;
+    max-width: 1000px; margin: 0 auto; width: 100%;
+  }
+  .viz-header {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .viz-title { font-size: 22px; font-weight: 700; }
+  .viz-controls {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ctrl-btn:hover { border-color: rgba(124,111,224,0.4); }
+  .ctrl-btn.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+  }
+  .ctrl-btn.primary:hover { background: #8e82e8; }
+  .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ctrl-btn.danger { border-color: rgba(224,111,154,0.4); color: var(--accent2); }
+
+  .algo-selector {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .algo-pill {
+    font-size: 12px; padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+  }
+  .algo-pill.active {
+    background: rgba(124,111,224,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* BARS */
+  .bars-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px 12px;
+    height: 280px;
+    display: flex; align-items: flex-end;
+    gap: 2px;
+    position: relative;
+  }
+  .bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    transition: background 0.05s;
+    position: relative;
+  }
+  .bar.idle { background: var(--bar-idle); }
+  .bar.active { background: var(--bar-active); }
+  .bar.compare { background: var(--bar-compare); }
+  .bar.sorted { background: var(--bar-sorted); }
+  .bar.pivot { background: var(--bar-pivot); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .stat-value { font-size: 22px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .stat-value.acc { color: var(--accent); }
+  .stat-value.acc2 { color: var(--accent2); }
+  .stat-value.acc3 { color: var(--accent3); }
+
+  /* SPEED */
+  .speed-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .speed-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  input[type=range] {
+    flex: 1; accent-color: var(--accent);
+    height: 4px; border-radius: 2px;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* ── COMPLEXITY PAGE ── */
+  .complexity-layout {
+    padding: 24px 20px 60px;
+    max-width: 900px; margin: 0 auto;
+  }
+  .section-header {
+    margin-bottom: 24px;
+  }
+  .section-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .section-title { font-size: 24px; font-weight: 700; }
+  .section-sub { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+  /* COMPLEXITY MATRIX */
+  .complexity-grid {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .algo-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .algo-row-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .algo-row-name { font-size: 16px; font-weight: 600; flex: 1; }
+  .algo-row-meta { font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .algo-row-chevron {
+    font-size: 12px; color: var(--muted); transition: transform 0.2s;
+  }
+  .algo-row.open .algo-row-chevron { transform: rotate(180deg); }
+
+  .complexity-details {
+    display: none; padding: 16px 18px;
+    gap: 12px;
+  }
+  .algo-row.open .complexity-details { display: flex; flex-direction: column; }
+
+  /* Visual complexity bars */
+  .complexity-cases {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+  }
+  .case-card {
+    border-radius: 10px; padding: 14px;
+    position: relative; overflow: hidden;
+  }
+  .case-best { background: rgba(111,224,200,0.08); border: 1px solid rgba(111,224,200,0.2); }
+  .case-avg { background: rgba(124,111,224,0.08); border: 1px solid rgba(124,111,224,0.2); }
+  .case-worst { background: rgba(224,111,154,0.08); border: 1px solid rgba(224,111,154,0.2); }
+
+  .case-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .case-best .case-label { color: var(--accent3); }
+  .case-avg .case-label { color: var(--accent); }
+  .case-worst .case-label { color: var(--accent2); }
+
+  .case-big { font-size: 20px; font-weight: 700; font-family: 'Space Mono', monospace; margin-bottom: 8px; }
+  .case-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* Growth viz */
+  .growth-bar-wrap { margin-top: 10px; }
+  .growth-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .growth-track {
+    height: 6px; background: var(--bar-idle); border-radius: 3px; overflow: hidden;
+  }
+  .growth-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+
+  /* Space / stable */
+  .meta-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .meta-pill {
+    font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+  }
+  .pill-in { background: rgba(111,224,200,0.12); color: var(--accent3); }
+  .pill-out { background: rgba(224,184,111,0.12); color: var(--accent4); }
+  .pill-stable { background: rgba(111,224,200,0.12); color: var(--accent3); }
+  .pill-unstable { background: rgba(224,111,154,0.12); color: var(--accent2); }
+
+  /* RACE PAGE */
+  .race-layout {
+    padding: 24px 20px 60px;
+    max-width: 900px; margin: 0 auto;
+  }
+  .race-controls {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .race-tracks { display: flex; flex-direction: column; gap: 10px; }
+  .race-track {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .race-track-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .track-name { font-size: 14px; font-weight: 600; }
+  .track-ops { font-size: 12px; font-family: 'Space Mono', monospace; color: var(--muted); }
+  .track-bar-bg { height: 8px; background: var(--bar-idle); border-radius: 4px; overflow: hidden; }
+  .track-bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.1s linear;
+  }
+  .track-status { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .winner-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; background: rgba(111,224,200,0.15); color: var(--accent3);
+    letter-spacing: 0.5px;
+  }
+  .size-btns { display: flex; gap: 6px; }
+  .size-btn {
+    font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    cursor: pointer; font-family: 'Outfit', sans-serif; transition: all 0.2s;
+  }
+  .size-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(124,111,224,0.1); }
+
+  /* page transitions */
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .page.active { animation: fadeSlide 0.25s ease; }
+</style>
+
+<nav>
+  <span class="nav-logo">sort/lab</span>
+  <button class="nav-btn active" onclick="showPage('home')">home</button>
+  <button class="nav-btn" onclick="showPage('visualizer')">visualizer</button>
+  <button class="nav-btn" onclick="showPage('complexity')">complexity</button>
+  <button class="nav-btn" onclick="showPage('race')">race mode</button>
+</nav>
+
+<!-- ══ HOME PAGE ══ -->
+<div class="page active" id="page-home">
+  <div class="home-hero">
+    <div class="hero-eyebrow">interactive learning tool</div>
+    <h1 class="hero-title">Sorting Algorithms<br>Demystified</h1>
+    <p class="hero-sub">Watch algorithms think in real time. Compare speeds, explore complexities, and build intuition for how data gets sorted.</p>
+  </div>
+  <div class="algo-cards" id="home-cards"></div>
+</div>
+
+<!-- ══ VISUALIZER PAGE ══ -->
+<div class="page" id="page-visualizer">
+  <div class="viz-layout">
+    <div class="viz-header">
+      <div>
+        <div id="viz-algo-name" style="font-size:22px;font-weight:700;">Bubble Sort</div>
+        <div id="viz-algo-tag" style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;">O(n²) average</div>
+      </div>
+      <div class="algo-selector" id="algo-selector"></div>
+    </div>
+
+    <div class="viz-controls">
+      <button class="ctrl-btn primary" id="btn-start" onclick="startSort()">▶ Sort</button>
+      <button class="ctrl-btn" id="btn-step" onclick="stepSort()">Step →</button>
+      <button class="ctrl-btn danger" onclick="resetArray()">↺ Reset</button>
+      <button class="ctrl-btn" onclick="randomize()">⟳ New Array</button>
+    </div>
+
+    <div class="speed-row">
+      <span class="speed-label">Speed</span>
+      <input type="range" id="speed-slider" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+      <span style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;min-width:28px;" id="speed-label">5x</span>
+    </div>
+
+    <div class="bars-container" id="bars-container"></div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Comparisons</div>
+        <div class="stat-value acc" id="stat-comps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Swaps</div>
+        <div class="stat-value acc2" id="stat-swaps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Array Reads</div>
+        <div class="stat-value acc3" id="stat-reads">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Status</div>
+        <div class="stat-value" id="stat-status" style="font-size:14px;padding-top:4px;">ready</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bar-active)"></div> comparing</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bar-compare)"></div> swapping</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bar-pivot)"></div> pivot</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--bar-sorted)"></div> sorted</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COMPLEXITY PAGE ══ -->
+<div class="page" id="page-complexity">
+  <div class="complexity-layout">
+    <div class="section-header">
+      <div class="section-tag">time & space</div>
+      <div class="section-title">Complexity Atlas</div>
+      <div class="section-sub">Click any algorithm to explore its behavior across best, average, and worst cases.</div>
+    </div>
+    <div class="complexity-grid" id="complexity-grid"></div>
+  </div>
+</div>
+
+<!-- ══ RACE PAGE ══ -->
+<div class="page" id="page-race">
+  <div class="race-layout">
+    <div class="section-header">
+      <div class="section-tag">head to head</div>
+      <div class="section-title">Algorithm Race</div>
+      <div class="section-sub">All five algorithms race simultaneously on the same data. Watch who finishes first.</div>
+    </div>
+    <div class="race-controls">
+      <div class="size-btns" id="size-btns"></div>
+      <button class="ctrl-btn primary" id="race-start-btn" onclick="startRace()">▶ Race</button>
+      <button class="ctrl-btn" onclick="resetRace()">↺ Reset</button>
+    </div>
+    <div class="race-tracks" id="race-tracks"></div>
+  </div>
+</div>
+
+<script>
+const ALGOS = [
+  {
+    id: 'bubble', name: 'Bubble Sort', icon: '◎',
+    avg: 'O(n²)', best: 'O(n)', worst: 'O(n²)',
+    space: 'O(1)', stable: true, inplace: true,
+    tier: 'bad', tierLabel: 'Teaching',
+    bestDesc: 'Already sorted array — just one pass needed.',
+    avgDesc: 'Random data — nested loops dominate.',
+    worstDesc: 'Reverse sorted — maximum swaps required.',
+    growths: [5, 70, 100],
+    color: '#e06f9a',
+    sort: bubbleSort
+  },
+  {
+    id: 'selection', name: 'Selection Sort', icon: '◈',
+    avg: 'O(n²)', best: 'O(n²)', worst: 'O(n²)',
+    space: 'O(1)', stable: false, inplace: true,
+    tier: 'bad', tierLabel: 'Simple',
+    bestDesc: 'Always O(n²) — always scans full unsorted region.',
+    avgDesc: 'Always scans to find minimum each pass.',
+    worstDesc: 'Same as best/avg — no adaptive behavior.',
+    growths: [70, 70, 70],
+    color: '#e0b86f',
+    sort: selectionSort
+  },
+  {
+    id: 'insertion', name: 'Insertion Sort', icon: '◰',
+    avg: 'O(n²)', best: 'O(n)', worst: 'O(n²)',
+    space: 'O(1)', stable: true, inplace: true,
+    tier: 'ok', tierLabel: 'Adaptive',
+    bestDesc: 'Nearly sorted: each element slides into place fast.',
+    avgDesc: 'Random data — shifts become expensive.',
+    worstDesc: 'Reverse sorted — maximum shifts every pass.',
+    growths: [5, 65, 100],
+    color: '#7c6fe0',
+    sort: insertionSort
+  },
+  {
+    id: 'merge', name: 'Merge Sort', icon: '⟁',
+    avg: 'O(n log n)', best: 'O(n log n)', worst: 'O(n log n)',
+    space: 'O(n)', stable: true, inplace: false,
+    tier: 'good', tierLabel: 'Reliable',
+    bestDesc: 'Consistent O(n log n) — always divides and merges.',
+    avgDesc: 'Guaranteed O(n log n) regardless of input.',
+    worstDesc: 'Still O(n log n) — worst case same as best.',
+    growths: [30, 30, 30],
+    color: '#6fe0c8',
+    sort: mergeSort
+  },
+  {
+    id: 'quick', name: 'Quick Sort', icon: '⚡',
+    avg: 'O(n log n)', best: 'O(n log n)', worst: 'O(n²)',
+    space: 'O(log n)', stable: false, inplace: true,
+    tier: 'good', tierLabel: 'Fastest Avg',
+    bestDesc: 'Pivot always splits evenly — perfect balance.',
+    avgDesc: 'Random pivot usually splits well — very fast in practice.',
+    worstDesc: 'Sorted input with bad pivot = O(n²) degradation.',
+    growths: [20, 25, 100],
+    color: '#e06f9a',
+    sort: quickSort
+  }
+];
+
+let arr = [], steps = [], stepIdx = 0, animTimer = null, animRunning = false;
+let comps = 0, swaps = 0, reads = 0;
+let selectedAlgo = 'bubble';
+let speedMs = 50;
+const N = 40;
+
+function getAlgo(id) { return ALGOS.find(a => a.id === id); }
+
+function randomize() {
+  stop();
+  arr = Array.from({length: N}, () => Math.floor(Math.random() * 90) + 10);
+  steps = []; stepIdx = 0; comps = 0; swaps = 0; reads = 0;
+  renderBars(arr, [], [], -1, []);
+  updateStats();
+  setStatus('ready');
+}
+
+function resetArray() {
+  stop();
+  steps = []; stepIdx = 0; comps = 0; swaps = 0; reads = 0;
+  renderBars(arr, [], [], -1, []);
+  updateStats();
+  setStatus('ready');
+}
+
+function stop() {
+  if (animTimer) clearTimeout(animTimer);
+  animRunning = false;
+  document.getElementById('btn-start').textContent = '▶ Sort';
+}
+
+function renderBars(a, active, compare, pivot, sorted) {
+  const c = document.getElementById('bars-container');
+  if (!c) return;
+  const max = Math.max(...a, 1);
+  c.innerHTML = '';
+  a.forEach((v, i) => {
+    const b = document.createElement('div');
+    b.className = 'bar';
+    b.style.height = (v / max * 92) + '%';
+    if (sorted.includes(i)) b.classList.add('sorted');
+    else if (i === pivot) b.classList.add('pivot');
+    else if (compare.includes(i)) b.classList.add('compare');
+    else if (active.includes(i)) b.classList.add('active');
+    else b.classList.add('idle');
+    c.appendChild(b);
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-comps').textContent = comps;
+  document.getElementById('stat-swaps').textContent = swaps;
+  document.getElementById('stat-reads').textContent = reads;
+}
+
+function setStatus(s) {
+  document.getElementById('stat-status').textContent = s;
+}
+
+function updateSpeed(v) {
+  speedMs = Math.max(5, 110 - v * 10);
+  document.getElementById('speed-label').textContent = v + 'x';
+}
+
+function startSort() {
+  if (animRunning) { stop(); return; }
+  if (stepIdx === 0) {
+    const algo = getAlgo(selectedAlgo);
+    let a = [...arr]; steps = [];
+    algo.sort(a, steps);
+    comps = 0; swaps = 0; reads = 0;
+  }
+  animRunning = true;
+  document.getElementById('btn-start').textContent = '⏸ Pause';
+  setStatus('sorting...');
+  animate();
+}
+
+function animate() {
+  if (!animRunning || stepIdx >= steps.length) {
+    if (stepIdx >= steps.length && steps.length > 0) {
+      renderBars(steps[steps.length-1].arr, [], [], -1, Array.from({length: N}, (_, i) => i));
+      setStatus('done!');
+    }
+    stop(); return;
+  }
+  const s = steps[stepIdx++];
+  if (s.comp) { comps++; reads += 2; }
+  if (s.swap) { swaps++; reads += 2; }
+  renderBars(s.arr, s.active || [], s.compare || [], s.pivot ?? -1, s.sorted || []);
+  updateStats();
+  animTimer = setTimeout(animate, speedMs);
+}
+
+function stepSort() {
+  if (stepIdx === 0) {
+    const algo = getAlgo(selectedAlgo);
+    let a = [...arr]; steps = [];
+    algo.sort(a, steps);
+    comps = 0; swaps = 0; reads = 0;
+  }
+  if (stepIdx < steps.length) {
+    const s = steps[stepIdx++];
+    if (s.comp) { comps++; reads += 2; }
+    if (s.swap) { swaps++; reads += 2; }
+    renderBars(s.arr, s.active || [], s.compare || [], s.pivot ?? -1, s.sorted || []);
+    updateStats();
+    setStatus(`step ${stepIdx}/${steps.length}`);
+  }
+  if (stepIdx >= steps.length) {
+    renderBars(steps[steps.length-1].arr, [], [], -1, Array.from({length: N}, (_, i) => i));
+    setStatus('done!');
+  }
+}
+
+// ══ SORT ALGORITHMS ══
+function bubbleSort(a, steps) {
+  let n = a.length, sorted = [];
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      steps.push({arr:[...a], active:[j,j+1], compare:[], sorted:[...sorted], comp:true});
+      if (a[j] > a[j+1]) {
+        [a[j], a[j+1]] = [a[j+1], a[j]];
+        steps.push({arr:[...a], active:[], compare:[j,j+1], sorted:[...sorted], swap:true});
+      }
+    }
+    sorted.unshift(n-1-i);
+  }
+  sorted.unshift(0);
+  steps.push({arr:[...a], active:[], compare:[], sorted:[...sorted]});
+}
+
+function selectionSort(a, steps) {
+  let n = a.length, sorted = [];
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i;
+    for (let j = i+1; j < n; j++) {
+      steps.push({arr:[...a], active:[minIdx,j], compare:[], sorted:[...sorted], comp:true});
+      if (a[j] < a[minIdx]) minIdx = j;
+    }
+    if (minIdx !== i) {
+      [a[i], a[minIdx]] = [a[minIdx], a[i]];
+      steps.push({arr:[...a], active:[], compare:[i,minIdx], sorted:[...sorted], swap:true});
+    }
+    sorted.push(i);
+  }
+  sorted.push(n-1);
+  steps.push({arr:[...a], active:[], compare:[], sorted:[...sorted]});
+}
+
+function insertionSort(a, steps) {
+  let n = a.length, sorted = [0];
+  for (let i = 1; i < n; i++) {
+    let key = a[i], j = i-1;
+    steps.push({arr:[...a], active:[i], compare:[], sorted:[...sorted], comp:true});
+    while (j >= 0 && a[j] > key) {
+      steps.push({arr:[...a], active:[j,j+1], compare:[], sorted:[...sorted], comp:true});
+      a[j+1] = a[j]; j--;
+      steps.push({arr:[...a], active:[], compare:[j+1, j+2], sorted:[...sorted], swap:true});
+    }
+    a[j+1] = key;
+    sorted.push(i);
+  }
+  steps.push({arr:[...a], active:[], compare:[], sorted:Array.from({length:a.length},(_,i)=>i)});
+}
+
+function mergeSort(a, steps) {
+  let sorted = [];
+  function merge(arr, l, m, r) {
+    let left = arr.slice(l, m+1), right = arr.slice(m+1, r+1);
+    let i = 0, j = 0, k = l;
+    while (i < left.length && j < right.length) {
+      steps.push({arr:[...arr], active:[l+i, m+1+j], compare:[], sorted:[...sorted], comp:true});
+      if (left[i] <= right[j]) { arr[k++] = left[i++]; }
+      else { arr[k++] = right[j++]; }
+      steps.push({arr:[...arr], active:[], compare:[k-1], sorted:[...sorted], swap:true});
+    }
+    while (i < left.length) { arr[k++] = left[i++]; steps.push({arr:[...arr], active:[], compare:[k-1], sorted:[...sorted], swap:true}); }
+    while (j < right.length) { arr[k++] = right[j++]; steps.push({arr:[...arr], active:[], compare:[k-1], sorted:[...sorted], swap:true}); }
+    for (let x = l; x <= r; x++) if (!sorted.includes(x)) sorted.push(x);
+  }
+  function ms(arr, l, r) {
+    if (l >= r) return;
+    let m = Math.floor((l+r)/2);
+    ms(arr, l, m); ms(arr, m+1, r); merge(arr, l, m, r);
+  }
+  ms(a, 0, a.length-1);
+  steps.push({arr:[...a], active:[], compare:[], sorted:Array.from({length:a.length},(_,i)=>i)});
+}
+
+function quickSort(a, steps) {
+  let sortedSet = new Set();
+  function qs(arr, lo, hi) {
+    if (lo >= hi) { sortedSet.add(lo); return; }
+    let pivot = arr[hi], i = lo-1;
+    for (let j = lo; j < hi; j++) {
+      steps.push({arr:[...arr], active:[j], compare:[], pivot:hi, sorted:[...sortedSet], comp:true});
+      if (arr[j] <= pivot) {
+        i++;
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        steps.push({arr:[...arr], active:[], compare:[i,j], pivot:hi, sorted:[...sortedSet], swap:true});
+      }
+    }
+    [arr[i+1], arr[hi]] = [arr[hi], arr[i+1]];
+    sortedSet.add(i+1);
+    steps.push({arr:[...arr], active:[], compare:[i+1], pivot:-1, sorted:[...sortedSet], swap:true});
+    qs(arr, lo, i); qs(arr, i+2, hi);
+  }
+  qs(a, 0, a.length-1);
+  steps.push({arr:[...a], active:[], compare:[], pivot:-1, sorted:Array.from({length:a.length},(_,i)=>i)});
+}
+
+// ══ BUILD UI ══
+function buildHome() {
+  const c = document.getElementById('home-cards');
+  ALGOS.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'algo-card';
+    div.innerHTML = `
+      <div class="card-icon">${a.icon}</div>
+      <div class="card-name">${a.name}</div>
+      <div class="card-avg">${a.avg} avg</div>
+      <div class="card-badge badge-${a.tier}">${a.tierLabel}</div>
+    `;
+    div.onclick = () => {
+      selectedAlgo = a.id;
+      showPage('visualizer');
+    };
+    c.appendChild(div);
+  });
+}
+
+function buildAlgoSelector() {
+  const c = document.getElementById('algo-selector');
+  ALGOS.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'algo-pill' + (a.id === selectedAlgo ? ' active' : '');
+    btn.textContent = a.name.split(' ')[0];
+    btn.onclick = () => {
+      selectedAlgo = a.id;
+      resetArray();
+      document.querySelectorAll('.algo-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const algo = getAlgo(selectedAlgo);
+      document.getElementById('viz-algo-name').textContent = algo.name;
+      document.getElementById('viz-algo-tag').textContent = `${algo.avg} average · ${algo.space} space`;
+    };
+    c.appendChild(btn);
+  });
+}
+
+function buildComplexity() {
+  const c = document.getElementById('complexity-grid');
+  ALGOS.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'algo-row';
+    div.innerHTML = `
+      <div class="algo-row-header" onclick="toggleRow(this)">
+        <span style="font-size:18px;margin-right:4px;">${a.icon}</span>
+        <span class="algo-row-name">${a.name}</span>
+        <span class="algo-row-meta">${a.avg}</span>
+        <span class="algo-row-chevron">▼</span>
+      </div>
+      <div class="complexity-details">
+        <div class="complexity-cases">
+          <div class="case-card case-best">
+            <div class="case-label">Best Case</div>
+            <div class="case-big" style="color:var(--accent3)">${a.best}</div>
+            <div class="growth-bar-wrap">
+              <div class="growth-track"><div class="growth-fill" style="width:${a.growths[0]}%;background:var(--accent3)"></div></div>
+            </div>
+            <div class="case-desc" style="margin-top:8px">${a.bestDesc}</div>
+          </div>
+          <div class="case-card case-avg">
+            <div class="case-label">Average Case</div>
+            <div class="case-big" style="color:var(--accent)">${a.avg}</div>
+            <div class="growth-bar-wrap">
+              <div class="growth-track"><div class="growth-fill" style="width:${a.growths[1]}%;background:var(--accent)"></div></div>
+            </div>
+            <div class="case-desc" style="margin-top:8px">${a.avgDesc}</div>
+          </div>
+          <div class="case-card case-worst">
+            <div class="case-label">Worst Case</div>
+            <div class="case-big" style="color:var(--accent2)">${a.worst}</div>
+            <div class="growth-bar-wrap">
+              <div class="growth-track"><div class="growth-fill" style="width:${a.growths[2]}%;background:var(--accent2)"></div></div>
+            </div>
+            <div class="case-desc" style="margin-top:8px">${a.worstDesc}</div>
+          </div>
+        </div>
+        <div class="meta-pills">
+          <span class="meta-pill ${a.inplace ? 'pill-in' : 'pill-out'}">${a.inplace ? '⊕ In-Place' : '⊗ Extra Space: ' + a.space}</span>
+          <span class="meta-pill ${a.stable ? 'pill-stable' : 'pill-unstable'}">${a.stable ? '✓ Stable' : '✗ Unstable'}</span>
+          <span class="meta-pill" style="background:rgba(255,255,255,0.05);color:var(--muted)">Space: ${a.space}</span>
+        </div>
+      </div>
+    `;
+    c.appendChild(div);
+  });
+}
+
+function toggleRow(header) {
+  const row = header.parentElement;
+  row.classList.toggle('open');
+}
+
+// ══ RACE ══
+const RACE_SIZES = [20, 50, 100, 200];
+let raceSize = 50, raceArr = [], raceRunning = false;
+let raceStates = {};
+
+function buildRaceTracks() {
+  const c = document.getElementById('race-tracks');
+  c.innerHTML = '';
+  ALGOS.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'race-track';
+    div.id = 'track-' + a.id;
+    div.innerHTML = `
+      <div class="race-track-header">
+        <span class="track-name">${a.icon} ${a.name}</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="track-ops" id="ops-${a.id}">0 ops</span>
+        </div>
+      </div>
+      <div class="track-bar-bg"><div class="track-bar-fill" id="fill-${a.id}" style="width:0%;background:${a.color}"></div></div>
+      <div class="track-status" id="status-${a.id}">waiting...</div>
+    `;
+    c.appendChild(div);
+  });
+}
+
+function buildSizeBtns() {
+  const c = document.getElementById('size-btns');
+  c.innerHTML = '';
+  RACE_SIZES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'size-btn' + (s === raceSize ? ' active' : '');
+    btn.textContent = 'n=' + s;
+    btn.onclick = () => {
+      raceSize = s;
+      document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      resetRace();
+    };
+    c.appendChild(btn);
+  });
+}
+
+function resetRace() {
+  raceRunning = false;
+  raceArr = Array.from({length: raceSize}, () => Math.floor(Math.random() * 90) + 10);
+  ALGOS.forEach(a => {
+    document.getElementById('fill-' + a.id).style.width = '0%';
+    document.getElementById('ops-' + a.id).textContent = '0 ops';
+    document.getElementById('status-' + a.id).textContent = 'ready';
+    const track = document.getElementById('track-' + a.id);
+    const badge = track.querySelector('.winner-badge');
+    if (badge) badge.remove();
+  });
+  raceStates = {};
+  document.getElementById('race-start-btn').textContent = '▶ Race';
+}
+
+function startRace() {
+  if (raceRunning) return;
+  raceRunning = true;
+  document.getElementById('race-start-btn').textContent = '⏳ Racing...';
+  let finishOrder = [];
+
+  ALGOS.forEach(a => {
+    const arr2 = [...raceArr];
+    const steps2 = [];
+    a.sort(arr2, steps2);
+    raceStates[a.id] = { steps: steps2, done: false };
+    document.getElementById('status-' + a.id).textContent = 'sorting...';
+  });
+
+  const totalSteps = Math.max(...ALGOS.map(a => raceStates[a.id].steps.length));
+  let tick = 0;
+  const CHUNK = Math.max(1, Math.floor(totalSteps / 120));
+
+  function raceTick() {
+    if (!raceRunning) return;
+    let allDone = true;
+    ALGOS.forEach(a => {
+      const state = raceStates[a.id];
+      if (state.done) return;
+      allDone = false;
+      const newIdx = Math.min(tick * CHUNK, state.steps.length);
+      const pct = state.steps.length > 0 ? (newIdx / state.steps.length * 100) : 100;
+      document.getElementById('fill-' + a.id).style.width = pct + '%';
+      document.getElementById('ops-' + a.id).textContent = newIdx + ' ops';
+      if (newIdx >= state.steps.length) {
+        state.done = true;
+        finishOrder.push(a.id);
+        const pos = finishOrder.length;
+        const labels = ['1st', '2nd', '3rd', '4th', '5th'];
+        document.getElementById('status-' + a.id).textContent = labels[pos-1] + ' to finish!';
+        document.getElementById('fill-' + a.id).style.width = '100%';
+        if (pos === 1) {
+          const header = document.querySelector('#track-' + a.id + ' .race-track-header');
+          const badge = document.createElement('span');
+          badge.className = 'winner-badge';
+          badge.textContent = 'WINNER';
+          header.appendChild(badge);
+        }
+      }
+    });
+    tick++;
+    if (!ALGOS.every(a => raceStates[a.id].done)) {
+      requestAnimationFrame(raceTick);
+    } else {
+      document.getElementById('race-start-btn').textContent = '▶ Race Again';
+      raceRunning = false;
+    }
+  }
+  raceTick();
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['home','visualizer','complexity','race'].indexOf(id) === i);
+  });
+  if (id === 'visualizer') {
+    randomize();
+  }
+}
+
+// INIT
+buildHome();
+buildAlgoSelector();
+buildComplexity();
+buildSizeBtns();
+buildRaceTracks();
+randomize();
+
+// Set initial algo tag
+const initAlgo = getAlgo(selectedAlgo);
+document.getElementById('viz-algo-tag').textContent = `${initAlgo.avg} average · ${initAlgo.space} space`;
+</script>
